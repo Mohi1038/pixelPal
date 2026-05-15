@@ -156,8 +156,13 @@ export class PixelPalRenderer {
     this.head.add(rightPupil);
     this.pupils.push(rightPupil);
 
-    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.08, 0.05), this.mouthMaterial);
-    mouth.position.set(0, 0.92, 0.55);
+    const mouthCurve = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(-0.14, 0, 0),
+      new THREE.Vector3(0, -0.05, 0.02),
+      new THREE.Vector3(0.14, 0, 0)
+    );
+    const mouth = new THREE.Mesh(new THREE.TubeGeometry(mouthCurve, 20, 0.02, 6, false), this.mouthMaterial);
+    mouth.position.set(0, 0.8, 0.56);
     this.mouth = mouth;
     this.head.add(mouth);
 
@@ -248,11 +253,11 @@ export class PixelPalRenderer {
       this.mouthMaterial.color = new THREE.Color(this.emotion === 'happy' ? 0x2d4c1f : this.emotion === 'bored' ? 0x4d5870 : 0x1d2f4c);
 
       // Animate mouth based on emotion
-      const mouthScale = this.emotion === 'happy' ? 1.3 : this.emotion === 'bored' ? 0.6 : 1;
-      const mouthBob = Math.sin(elapsed * 3.5) * (this.emotion === 'happy' ? 0.08 : 0.02);
+      const mouthScale = this.emotion === 'happy' ? 1.35 : this.emotion === 'bored' ? 0.72 : 1;
+      const mouthBob = Math.sin(elapsed * 3.5) * (this.emotion === 'happy' ? 0.04 : 0.015);
       if (this.mouth) {
-        this.mouth.scale.setScalar(mouthScale);
-        this.mouth.position.y = 0.92 + mouthBob;
+        this.mouth.scale.set(mouthScale, this.emotion === 'happy' ? 1.2 : 1, 1);
+        this.mouth.position.y = 0.8 + mouthBob;
       }
       
       const eyeOpen = profile.eyeGlow + (this.emotion === 'surprised' ? 0.3 : 0) - (this.emotion === 'bored' ? 0.4 : 0);
