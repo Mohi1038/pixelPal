@@ -67,6 +67,9 @@ export interface PixelPalResponse {
   text: string;
   tone: Tone;
   emotion: EmotionState;
+  selectedText?: string;
+  sources?: string[];
+  followUps?: string[];
 }
 
 export interface MemoryRecord {

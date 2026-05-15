@@ -84,7 +84,14 @@ function parseAssistantResponse(raw: string, fallback: PixelPalResponse): PixelP
       return {
         text: parsed.text.slice(0, 240),
         tone: parsed.tone as PixelPalResponse['tone'],
-        emotion: parsed.emotion as PixelPalResponse['emotion']
+        emotion: parsed.emotion as PixelPalResponse['emotion'],
+        selectedText: typeof parsed.selectedText === 'string' ? parsed.selectedText.slice(0, 240) : undefined,
+        sources: Array.isArray(parsed.sources)
+          ? parsed.sources.filter((source): source is string => typeof source === 'string').slice(0, 4)
+          : undefined,
+        followUps: Array.isArray(parsed.followUps)
+          ? parsed.followUps.filter((prompt): prompt is string => typeof prompt === 'string').slice(0, 4)
+          : undefined
       };
     }
   } catch {

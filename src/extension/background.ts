@@ -39,10 +39,6 @@ async function handleSnapshot(snapshot: PageSnapshot) {
   const queryVector = embedText(context.summary);
   const similar = findSimilarRecords(records, queryVector, 3);
   const memoryHits = similar.map((record) => String((record.value as { summary?: string }).summary ?? record.key));
-  const conversation = await loadConversationTurns(context.topic);
-  const settings = await loadLlmSettings();
-  console.log('🤖 [PixelPal] LLM Settings:', { provider: settings.provider, model: settings.model, enabled: settings.enabled });
-  const response = await generateCompletion({ context, memoryHits, conversation, settings });
 
   await saveMemoryRecord({
     id: crypto.randomUUID(),
@@ -60,26 +56,13 @@ async function handleSnapshot(snapshot: PageSnapshot) {
       content: context.summary,
       timestamp: now
     },
-    {
-      topic: context.topic,
-      role: 'assistant',
-      content: response.text,
-      timestamp: now + 1
-    }
   ];
 
   for (const turn of conversationTurns) {
     await appendConversationTurn(turn);
   }
 
-  const finalResponse: PixelPalResponse = {
-    text: response.text,
-    tone: response.tone,
-    emotion: response.emotion
-  };
-
-  state.emotion = finalResponse.emotion;
-  return { context, response: finalResponse };
+  return { context, memoryHits };
 }
 
 async function handleUserEvent(type: PixelPalMessage['type']) {
@@ -91,6 +74,25 @@ async function handleUserEvent(type: PixelPalMessage['type']) {
     context: state.lastContext
   });
   return { emotion: state.emotion, context: state.lastContext };
+}
+
+function buildSelectionContext(selection: string) {
+  const normalized = selection.replace(/\s+/g, ' ').trim();
+  const keyPhrases = normalized
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 6);
+
+  return {
+    title: state.lastContext?.title ?? 'Highlighted text',
+    url: state.lastContext?.url ?? '',
+    topic: normalized || 'highlighted text',
+    summary: normalized,
+    tone: 'curious' as const,
+    complexity: Math.min(1, normalized.length / 160),
+    readingLoad: Math.min(1, normalized.length / 220),
+    keyPhrases
+  };
 }
 
 async function sendToSender(sender: chrome.runtime.MessageSender, message: PixelPalMessage) {
@@ -115,7 +117,6 @@ chrome.runtime.onMessage.addListener((message: PixelPalMessage, _sender, sendRes
           console.log('📸 [PixelPal Background] Processing PAGE_SNAPSHOT');
           const result = await handleSnapshot(message.payload as PageSnapshot);
           await sendToSender(sender, { type: 'NPC_STATE', payload: { emotion: state.emotion, context: result.context } });
-          await sendToSender(sender, { type: 'NPC_SPEAK', payload: result.response });
         }
         break;
       case 'USER_SCROLL':
@@ -128,20 +129,25 @@ chrome.runtime.onMessage.addListener((message: PixelPalMessage, _sender, sendRes
         }
         break;
       case 'ASK_AI': {
-        const context = state.lastContext;
+        const payload = typeof message.payload === 'object' && message.payload ? (message.payload as { selection?: unknown; question?: unknown }) : undefined;
+        const selection = String(payload?.selection ?? payload?.question ?? '').trim();
+        const context = selection ? buildSelectionContext(selection) : state.lastContext;
+
         if (!context) {
-          sendResponse({ text: 'I need a page first.', tone: 'neutral', emotion: 'idle' });
+          sendResponse({ text: 'Highlight some text first, and I will explain it.', tone: 'neutral', emotion: 'idle' });
           return;
         }
         const settings = await loadLlmSettings();
-        const conversation = await loadConversationTurns(context.topic);
+        const conversation = selection ? [] : await loadConversationTurns(context.topic);
         const response = await generateCompletion({
           context,
           memoryHits: [],
           conversation,
           settings,
-          question: typeof message.payload === 'object' && message.payload && 'question' in message.payload ? String((message.payload as { question?: unknown }).question ?? '') : undefined
+          question: selection || undefined
         });
+        await sendToSender(sender, { type: 'NPC_STATE', payload: { emotion: response.emotion, context } });
+        await sendToSender(sender, { type: 'NPC_SPEAK', payload: { ...response, selectedText: selection || undefined } });
         sendResponse(response);
         return;
       }
