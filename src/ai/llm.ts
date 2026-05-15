@@ -1,8 +1,26 @@
 import type { ChatMessage, ConversationTurn, LlmSettings, LlmProvider, PageContext, PixelPalResponse } from '@/shared/types';
 import { buildChatMessages } from './promptBuilder';
 
-function styleResponse(context: PageContext, memoryHits: string[]): PixelPalResponse {
+function styleResponse(context: PageContext, memoryHits: string[], question?: string): PixelPalResponse {
+  const selectedText = question?.trim() ?? '';
+  const selectedWordCount = selectedText ? selectedText.split(/\s+/).filter(Boolean).length : 0;
   const memoryLine = memoryHits[0] ? `I remember something similar: ${memoryHits[0]}.` : 'I am mapping the terrain.';
+
+  if (selectedText) {
+    if (selectedWordCount <= 3) {
+      return {
+        text: `${selectedText} is a highlighted term. I could not fetch a live dictionary result just now, but I can still explain it if you try again or ask for a simpler version.`,
+        tone: 'helpful',
+        emotion: 'thinking'
+      };
+    }
+
+    return {
+      text: `Here is the highlighted part: ${context.summary}. ${memoryLine}`.slice(0, 220),
+      tone: 'helpful',
+      emotion: 'thinking'
+    };
+  }
 
   if (context.tone === 'concerned') {
     return {
@@ -197,7 +215,7 @@ export async function generateCompletion(input: {
   settings: LlmSettings;
   question?: string;
 }) {
-  const fallback = styleResponse(input.context, input.memoryHits);
+  const fallback = styleResponse(input.context, input.memoryHits, input.question);
 
   if (input.settings.enabled && input.settings.provider !== 'local') {
     try {

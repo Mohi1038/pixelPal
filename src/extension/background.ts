@@ -76,6 +76,49 @@ async function handleUserEvent(type: PixelPalMessage['type']) {
   return { emotion: state.emotion, context: state.lastContext };
 }
 
+function getSelectionWordCount(selection: string) {
+  return selection.replace(/\s+/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+}
+
+async function lookupDictionaryMeaning(selection: string) {
+  const normalized = selection.replace(/\s+/g, ' ').trim();
+  const query = encodeURIComponent(normalized.toLowerCase());
+  const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${query}`);
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const entries = await response.json() as Array<{
+    word?: string;
+    phonetic?: string;
+    meanings?: Array<{
+      partOfSpeech?: string;
+      definitions?: Array<{ definition?: string; example?: string }>;
+    }>;
+  }>;
+
+  const firstEntry = entries[0];
+  const firstMeaning = firstEntry?.meanings?.[0];
+  const firstDefinition = firstMeaning?.definitions?.[0];
+
+  if (!firstEntry || !firstMeaning || !firstDefinition?.definition) {
+    return null;
+  }
+
+  const partOfSpeech = firstMeaning.partOfSpeech ? ` (${firstMeaning.partOfSpeech})` : '';
+  const example = firstDefinition.example ? ` Example: ${firstDefinition.example}` : '';
+
+  return {
+    text: `${firstEntry.word ?? normalized}${partOfSpeech}: ${firstDefinition.definition}.${example}`,
+    tone: 'helpful' as const,
+    emotion: 'thinking' as const,
+    selectedText: normalized,
+    sources: ['Dictionary API', 'Wikipedia', 'Google Search'],
+    followUps: ['Show an example', 'Explain in simpler words', 'What is the origin?']
+  };
+}
+
 function buildSelectionContext(selection: string) {
   const normalized = selection.replace(/\s+/g, ' ').trim();
   const keyPhrases = normalized
@@ -139,6 +182,17 @@ chrome.runtime.onMessage.addListener((message: PixelPalMessage, _sender, sendRes
         }
         const settings = await loadLlmSettings();
         const conversation = selection ? [] : await loadConversationTurns(context.topic);
+
+        if (selection && getSelectionWordCount(selection) <= 3) {
+          const dictionaryAnswer = await lookupDictionaryMeaning(selection);
+          if (dictionaryAnswer) {
+            await sendToSender(sender, { type: 'NPC_STATE', payload: { emotion: dictionaryAnswer.emotion, context } });
+            await sendToSender(sender, { type: 'NPC_SPEAK', payload: dictionaryAnswer });
+            sendResponse(dictionaryAnswer);
+            return;
+          }
+        }
+
         const response = await generateCompletion({
           context,
           memoryHits: [],
