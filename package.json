@@ -1,0 +1,22 @@
+{
+  "name": "pixelpal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PixelPal Chrome extension with a low-poly AI companion overlay.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "esbuild": "^0.25.4",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.34",
+    "@types/node": "^22.15.29",
+    "@types/three": "^0.184.1",
+    "typescript": "^5.8.3"
+  }
+}
