@@ -33,6 +33,16 @@ function emit(message: PixelPalMessage) {
   chrome.runtime.sendMessage(message).catch(() => undefined);
 }
 
+function isSelectionInsideOverlay() {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    return false;
+  }
+
+  const anchorNode = selection.anchorNode;
+  return Boolean(anchorNode && anchorNode instanceof Node && anchorNode.parentElement?.closest?.(`#${ROOT_ID}`));
+}
+
 function clearInsightPanel() {
   if (!insightPanel) return;
   insightPanel.hidden = true;
@@ -112,6 +122,9 @@ function ensureOverlay() {
         gap: 10px;
         max-height: 260px;
         overflow: auto;
+        user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select: none;
       }
 
       .insight-panel[hidden] {
@@ -129,18 +142,21 @@ function ensureOverlay() {
         font-size: 14px;
         font-weight: 700;
         color: #dff8ff;
+        user-select: none;
       }
 
       .insight-selection {
         font-size: 13px;
         line-height: 1.5;
         color: rgba(238, 248, 255, 0.85);
+        user-select: none;
       }
 
       .insight-text {
         font-size: 14px;
         line-height: 1.55;
         color: #eef8ff;
+        user-select: none;
       }
 
       .chip-row {
@@ -156,6 +172,7 @@ function ensureOverlay() {
         background: rgba(124, 234, 249, 0.08);
         color: #c8f4ff;
         clip-path: polygon(8% 0, 100% 0, 100% 82%, 92% 100%, 0 100%, 0 18%);
+        user-select: none;
       }
 
       button.chip {
@@ -317,6 +334,10 @@ function start() {
   const askAboutSelection = () => {
     window.clearTimeout(selectionTimer);
     selectionTimer = window.setTimeout(() => {
+      if (isSelectionInsideOverlay()) {
+        return;
+      }
+
       const selection = window.getSelection()?.toString().replace(/\s+/g, ' ').trim() ?? '';
       if (!selection) {
         clearInsightPanel();
