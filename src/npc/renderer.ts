@@ -54,6 +54,9 @@ export class PixelPalRenderer {
   private contextSignal: ContextSignal = { focus: 0.5, curiosity: 0.5, load: 0.5 };
   private raf = 0;
   private readonly eyeMaterials: THREE.MeshStandardMaterial[] = [];
+  private readonly pupilMaterials: THREE.MeshStandardMaterial[] = [];
+  private readonly pupils: THREE.Mesh[] = [];
+  private mouth: THREE.Mesh | null = null;
   private readonly bodyMaterial = new THREE.MeshStandardMaterial({
     color: moodPalette.idle,
     flatShading: true,
@@ -137,8 +140,25 @@ export class PixelPalRenderer {
     rightEye.position.set(0.25, 1.18, 0.52);
     this.head.add(rightEye);
 
-    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.06, 0.05), this.mouthMaterial);
+    // Add pupils
+    const pupilGeometry = new THREE.SphereGeometry(0.04, 8, 8);
+    const leftPupilMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x000000, flatShading: true });
+    const rightPupilMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x000000, flatShading: true });
+    this.pupilMaterials.push(leftPupilMaterial, rightPupilMaterial);
+
+    const leftPupil = new THREE.Mesh(pupilGeometry, leftPupilMaterial);
+    leftPupil.position.set(-0.25, 1.18, 0.58);
+    this.head.add(leftPupil);
+    this.pupils.push(leftPupil);
+
+    const rightPupil = new THREE.Mesh(pupilGeometry, rightPupilMaterial);
+    rightPupil.position.set(0.25, 1.18, 0.58);
+    this.head.add(rightPupil);
+    this.pupils.push(rightPupil);
+
+    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.08, 0.05), this.mouthMaterial);
     mouth.position.set(0, 0.92, 0.55);
+    this.mouth = mouth;
     this.head.add(mouth);
 
     const brow = new THREE.Mesh(
@@ -227,9 +247,38 @@ export class PixelPalRenderer {
 
       this.mouthMaterial.color = new THREE.Color(this.emotion === 'happy' ? 0x2d4c1f : this.emotion === 'bored' ? 0x4d5870 : 0x1d2f4c);
 
+      // Animate mouth based on emotion
+      const mouthScale = this.emotion === 'happy' ? 1.3 : this.emotion === 'bored' ? 0.6 : 1;
+      const mouthBob = Math.sin(elapsed * 3.5) * (this.emotion === 'happy' ? 0.08 : 0.02);
+      if (this.mouth) {
+        this.mouth.scale.setScalar(mouthScale);
+        this.mouth.position.y = 0.92 + mouthBob;
+      }
+      
       const eyeOpen = profile.eyeGlow + (this.emotion === 'surprised' ? 0.3 : 0) - (this.emotion === 'bored' ? 0.4 : 0);
       for (const material of this.eyeMaterials) {
         material.emissiveIntensity = eyeOpen;
+      }
+
+      // Animate pupils to look around
+      const pupilLookX = Math.sin(elapsed * 0.8) * 0.04;
+      const pupilLookY = Math.cos(elapsed * 1.2) * 0.05;
+      const pupilOpenAmount = this.emotion === 'bored' ? 0.02 : this.emotion === 'surprised' ? 0.08 : 0.04;
+      
+      for (let i = 0; i < this.pupils.length; i++) {
+        const pupil = this.pupils[i];
+        const direction = i === 0 ? -1 : 1;
+        pupil.position.z = 0.58 + pupilOpenAmount;
+        pupil.position.x = (i === 0 ? -0.25 : 0.25) + pupilLookX * direction;
+        pupil.position.y = 1.18 + pupilLookY;
+        
+        // Blink animation
+        const blinkCycle = (elapsed * 1.5) % 4;
+        if (blinkCycle > 3.5) {
+          pupil.scale.y = 1 - (blinkCycle - 3.5) * 5;
+        } else {
+          pupil.scale.y = 1;
+        }
       }
 
       for (let index = 0; index < this.shards.length; index += 1) {
