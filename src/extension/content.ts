@@ -32,11 +32,12 @@ function ensureOverlay() {
   host.id = ROOT_ID;
   host.style.all = 'initial';
   host.style.position = 'fixed';
-  host.style.right = '0';
-  host.style.bottom = '0';
+  host.style.right = '20px';
+  host.style.bottom = '20px';
   host.style.zIndex = '2147483647';
   host.style.display = 'block';
   host.style.pointerEvents = 'none';
+  host.style.cursor = 'grab';
   document.documentElement.appendChild(host);
 
   const shadow = host.attachShadow({ mode: 'open' });
@@ -45,8 +46,6 @@ function ensureOverlay() {
       :host {
         all: initial;
         position: fixed;
-        right: 0;
-        bottom: 0;
         z-index: 2147483647;
         pointer-events: none;
         background: transparent;
@@ -54,8 +53,8 @@ function ensureOverlay() {
 
       .stage {
         position: relative;
-        width: 320px;
-        height: 360px;
+        width: 240px;
+        height: 280px;
         pointer-events: auto;
         color: #eff8ff;
         font-family: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -63,6 +62,12 @@ function ensureOverlay() {
         background: transparent;
         transform-origin: bottom right;
         animation: entrance 520ms ease-out;
+        cursor: grab;
+        user-select: none;
+      }
+
+      .stage:active {
+        cursor: grabbing;
       }
 
       canvas {
@@ -95,6 +100,34 @@ function ensureOverlay() {
     };
     resize();
     new ResizeObserver(resize).observe(stage);
+
+    // Drag functionality
+    let isDragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    stage.addEventListener('mousedown', (e: MouseEvent) => {
+      isDragging = true;
+      const rect = host.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+      (stage as HTMLElement).style.cursor = 'grabbing';
+    });
+
+    document.addEventListener('mousemove', (e: MouseEvent) => {
+      if (!isDragging) return;
+      const x = e.clientX - offsetX;
+      const y = e.clientY - offsetY;
+      host.style.left = x + 'px';
+      host.style.top = y + 'px';
+      host.style.right = 'auto';
+      host.style.bottom = 'auto';
+    });
+
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+      (stage as HTMLElement).style.cursor = 'grab';
+    });
   }
 
   renderer.start();
