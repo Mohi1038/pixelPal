@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PixelPal Command Deck</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        background:
+          radial-gradient(circle at 15% 15%, rgba(125, 229, 255, 0.18), transparent 30%),
+          radial-gradient(circle at 85% 20%, rgba(115, 110, 255, 0.16), transparent 22%),
+          linear-gradient(180deg, #07101e, #0d1828 50%, #08111d);
+        color: #eef8ff;
+      }
+
+      .shell {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      .panel {
+        width: min(920px, 100%);
+        border: 1px solid rgba(148, 224, 255, 0.2);
+        background: linear-gradient(180deg, rgba(12, 21, 36, 0.96), rgba(8, 14, 24, 0.98));
+        clip-path: polygon(2% 0, 98% 0, 100% 8%, 100% 94%, 97% 100%, 3% 100%, 0 92%, 0 6%);
+        box-shadow: 0 36px 100px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+      }
+
+      .header {
+        padding: 24px 28px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        border-bottom: 1px solid rgba(148, 224, 255, 0.14);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(24px, 3vw, 40px);
+        letter-spacing: 0.02em;
+      }
+
+      .subtle {
+        margin: 6px 0 0;
+        color: rgba(238, 248, 255, 0.72);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 0;
+      }
+
+      .hero {
+        padding: 28px;
+        border-right: 1px solid rgba(148, 224, 255, 0.14);
+      }
+
+      .form {
+        padding: 28px;
+        display: grid;
+        gap: 16px;
+      }
+
+      label {
+        display: grid;
+        gap: 8px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: #9fd7ff;
+      }
+
+      input, textarea {
+        width: 100%;
+        border: 1px solid rgba(148, 224, 255, 0.18);
+        background: rgba(7, 14, 24, 0.85);
+        color: #eef8ff;
+        padding: 12px 14px;
+        outline: none;
+        box-sizing: border-box;
+        clip-path: polygon(6% 0, 100% 0, 100% 92%, 94% 100%, 0 100%, 0 8%);
+      }
+
+      textarea {
+        min-height: 110px;
+        resize: vertical;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .full {
+        display: grid;
+        gap: 8px;
+      }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        border: 1px solid rgba(148, 224, 255, 0.18);
+        background: rgba(7, 14, 24, 0.85);
+        clip-path: polygon(8% 0, 100% 0, 100% 90%, 92% 100%, 0 100%, 0 10%);
+      }
+
+      .toggle input {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+      }
+
+      select:disabled,
+      input:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        border: 0;
+        color: #08111d;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 12px 16px;
+        background: linear-gradient(90deg, #7ceaf9, #9ef5c9);
+        clip-path: polygon(10% 0, 100% 0, 100% 88%, 90% 100%, 0 100%, 0 12%);
+        cursor: pointer;
+      }
+
+      .ghost {
+        background: linear-gradient(90deg, rgba(148, 224, 255, 0.16), rgba(124, 234, 249, 0.12));
+        color: #eef8ff;
+        border: 1px solid rgba(148, 224, 255, 0.2);
+      }
+
+      .status {
+        margin-top: 14px;
+        color: #9ef5c9;
+        min-height: 1.2em;
+      }
+
+      .statcard {
+        display: grid;
+        gap: 10px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(148, 224, 255, 0.12);
+        clip-path: polygon(8% 0, 100% 0, 100% 88%, 92% 100%, 0 100%, 0 12%);
+      }
+
+      .statlabel {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        color: rgba(159, 215, 255, 0.82);
+      }
+
+      .statvalue {
+        line-height: 1.55;
+        color: rgba(238, 248, 255, 0.82);
+      }
+
+      @media (max-width: 760px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          border-right: 0;
+          border-bottom: 1px solid rgba(148, 224, 255, 0.14);
+        }
+
+        .row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <section class="panel">
+        <div class="header">
+          <div>
+            <h1>PixelPal Command Deck</h1>
+            <p class="subtle">Configure the remote LLM bridge and keep the companion feeling alive.</p>
+          </div>
+          <div class="statcard">
+            <div class="statlabel">Mode</div>
+            <div class="statvalue" id="mode-label">Offline fallback</div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="hero">
+            <div class="statcard">
+              <div class="statlabel">What this controls</div>
+              <div class="statvalue">
+                When enabled, PixelPal sends page context and short conversation history to the selected LLM provider.
+                If the request fails, it falls back to the local browser brain automatically.
+              </div>
+            </div>
+          </div>
+          <form class="form" id="settings-form">
+            <label class="toggle">
+              <input id="enabled" type="checkbox" />
+              Enable remote LLM
+            </label>
+            <label class="full">
+              Provider
+              <select id="provider">
+                <option value="local">Local fallback only</option>
+                <option value="openai-compatible">OpenAI-compatible</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="anthropic">Anthropic Claude</option>
+              </select>
+            </label>
+            <div class="row">
+              <label>
+                Endpoint
+                <input id="endpoint" placeholder="https://api.openai.com" />
+              </label>
+              <label>
+                Model
+                <input id="model" placeholder="gpt-4o-mini" />
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                API Key
+                <input id="apiKey" placeholder="sk-..." />
+              </label>
+              <label>
+                Temperature
+                <input id="temperature" type="number" min="0" max="2" step="0.05" />
+              </label>
+            </div>
+            <label>
+              System Prompt
+              <textarea id="systemPrompt"></textarea>
+            </label>
+            <div class="row">
+              <label>
+                Max Tokens
+                <input id="maxTokens" type="number" min="32" max="1024" step="1" />
+              </label>
+              <div class="statcard">
+                <div class="statlabel">Behavior</div>
+                <div class="statvalue">Short replies, low-latency fallback, and conversation memory are preserved locally.</div>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="submit">Save Deck</button>
+              <button type="button" class="ghost" id="reset">Reset</button>
+            </div>
+            <div id="status" class="status"></div>
+          </form>
+        </div>
+      </section>
+    </div>
+    <script src="options.js"></script>
+  </body>
+</html>
