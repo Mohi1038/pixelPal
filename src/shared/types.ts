@@ -1,5 +1,17 @@
 export type EmotionState = 'idle' | 'thinking' | 'happy' | 'bored' | 'surprised';
 
+/** Low-poly companion the user can pick in the overlay. */
+export type CharacterId = 'crystal' | 'sparky' | 'jerry' | 'lily';
+
+export const CHARACTER_IDS: CharacterId[] = ['crystal', 'sparky', 'jerry', 'lily'];
+
+export const CHARACTER_LABELS: Record<CharacterId, string> = {
+  crystal: 'Crystal',
+  sparky: 'Pika',
+  jerry: 'Jerry',
+  lily: 'Lily'
+};
+
 export type Tone = 'neutral' | 'friendly' | 'helpful' | 'sarcastic' | 'concerned' | 'curious';
 
 export type PixelPalEventType =
