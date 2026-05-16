@@ -1,5 +1,14 @@
+import { loadCharacterId, saveCharacterId } from '@/npc/characterStorage';
 import { PixelPalRenderer } from '@/npc/renderer';
-import type { EmotionState, PixelPalMessage, PixelPalResponse, PageSnapshot } from '@/shared/types';
+import {
+  CHARACTER_IDS,
+  CHARACTER_LABELS,
+  type CharacterId,
+  type EmotionState,
+  type PixelPalMessage,
+  type PixelPalResponse,
+  type PageSnapshot
+} from '@/shared/types';
 
 const ROOT_ID = 'pixelpal-root';
 let renderer: PixelPalRenderer | null = null;
@@ -14,6 +23,8 @@ let insightSources: HTMLDivElement | null = null;
 let insightFollowUps: HTMLDivElement | null = null;
 let insightSelection: HTMLDivElement | null = null;
 let activeSelection = '';
+let characterId: CharacterId = 'crystal';
+let characterPicker: HTMLDivElement | null = null;
 
 function normalizeText(text: string) {
   return text.replace(/\s+/g, ' ').trim();
@@ -93,8 +104,10 @@ function ensureOverlay() {
 
       .stage {
         position: relative;
+        display: flex;
+        flex-direction: column;
         width: 240px;
-        height: 280px;
+        height: 300px;
         pointer-events: auto;
         color: #eff8ff;
         font-family: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -109,7 +122,7 @@ function ensureOverlay() {
       .insight-panel {
         position: absolute;
         left: 0;
-        top: 292px;
+        top: 312px;
         width: 300px;
         padding: 14px 14px 12px;
         background: linear-gradient(180deg, rgba(10, 18, 31, 0.97), rgba(7, 12, 21, 0.98));
@@ -186,10 +199,52 @@ function ensureOverlay() {
         cursor: grabbing;
       }
 
+      .viewport {
+        position: relative;
+        flex: 1;
+        min-height: 248px;
+        overflow: hidden;
+      }
+
       canvas {
         width: 100%;
         height: 100%;
         display: block;
+      }
+
+      .character-picker {
+        flex-shrink: 0;
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+        padding: 6px 8px 8px;
+        pointer-events: auto;
+      }
+
+      .character-btn {
+        appearance: none;
+        -webkit-appearance: none;
+        border: 1px solid rgba(148, 224, 255, 0.22);
+        background: rgba(8, 16, 28, 0.82);
+        color: rgba(220, 244, 255, 0.88);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        padding: 5px 7px;
+        cursor: pointer;
+        clip-path: polygon(10% 0, 100% 0, 100% 78%, 90% 100%, 0 100%, 0 22%);
+        transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+      }
+
+      .character-btn:hover {
+        border-color: rgba(148, 224, 255, 0.45);
+        color: #eff8ff;
+      }
+
+      .character-btn[aria-pressed="true"] {
+        background: rgba(124, 234, 249, 0.18);
+        border-color: rgba(124, 234, 249, 0.55);
+        color: #dff8ff;
       }
 
       @keyframes entrance {
@@ -200,7 +255,10 @@ function ensureOverlay() {
       }
     </style>
     <div class="stage">
-        <canvas id="npc-canvas"></canvas>
+        <div class="viewport">
+          <canvas id="npc-canvas"></canvas>
+        </div>
+        <div class="character-picker" id="character-picker"></div>
     </div>
     <div class="insight-panel" id="insight-panel" hidden>
       <div class="insight-label">Selected text</div>
@@ -228,15 +286,17 @@ function ensureOverlay() {
   insightFollowUps = shadow.getElementById('insight-followups') as HTMLDivElement | null;
   insightSelection = shadow.getElementById('insight-selection') as HTMLDivElement | null;
 
-  renderer = new PixelPalRenderer({ canvas });
+  characterPicker = shadow.getElementById('character-picker') as HTMLDivElement | null;
+
   const stage = shadow.querySelector('.stage') as HTMLElement | null;
-  if (stage) {
+  const viewport = shadow.querySelector('.viewport') as HTMLElement | null;
+  if (stage && viewport) {
     const resize = () => {
-      const rect = stage.getBoundingClientRect();
+      const rect = viewport.getBoundingClientRect();
       renderer?.resize(rect.width, rect.height);
     };
     resize();
-    new ResizeObserver(resize).observe(stage);
+    new ResizeObserver(resize).observe(viewport);
 
     // Drag functionality
     let isDragging = false;
@@ -244,6 +304,9 @@ function ensureOverlay() {
     let offsetY = 0;
 
     stage.addEventListener('mousedown', (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.character-picker')) {
+        return;
+      }
       isDragging = true;
       const rect = host.getBoundingClientRect();
       offsetX = e.clientX - rect.left;
@@ -267,7 +330,43 @@ function ensureOverlay() {
     });
   }
 
-  renderer.start();
+  void setupCharacterPicker(canvas).then(() => {
+    renderer?.start();
+  });
+}
+
+function updateCharacterPickerUi() {
+  if (!characterPicker) return;
+  for (const button of characterPicker.querySelectorAll<HTMLButtonElement>('.character-btn')) {
+    const id = button.dataset.character as CharacterId | undefined;
+    button.setAttribute('aria-pressed', id === characterId ? 'true' : 'false');
+  }
+}
+
+async function setupCharacterPicker(canvas: HTMLCanvasElement) {
+  characterId = await loadCharacterId();
+  renderer = new PixelPalRenderer({ canvas, characterId });
+  updateCharacterPickerUi();
+
+  if (!characterPicker) return;
+
+  characterPicker.innerHTML = '';
+  for (const id of CHARACTER_IDS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'character-btn';
+    button.dataset.character = id;
+    button.textContent = CHARACTER_LABELS[id];
+    button.setAttribute('aria-pressed', id === characterId ? 'true' : 'false');
+    button.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      characterId = id;
+      renderer?.setCharacter(id);
+      updateCharacterPickerUi();
+      await saveCharacterId(id);
+    });
+    characterPicker.appendChild(button);
+  }
 }
 
 function updateMeters(contextScore = 0.5) {
@@ -322,7 +421,7 @@ function updateSpeech(payload: PixelPalResponse & { selectedText?: string; sourc
   }
 }
 
-function start() {
+async function start() {
   console.log('🎮 PixelPal: Initializing content script...');
   ensureOverlay();
   console.log('✅ PixelPal: Overlay created');
