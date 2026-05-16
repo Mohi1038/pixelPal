@@ -344,7 +344,7 @@ export class PixelPalRenderer {
     if (face.mouth) {
       if (isJerry) {
         const jerrySmile = mouthBored ? 0.88 : mouthSurprised ? 1.18 : 1.15;
-        face.mouth.scale.set(jerrySmile, -jerrySmile, 1);
+        face.mouth.scale.set(jerrySmile, jerrySmile, 1);
         face.mouth.rotation.z = 0;
       } else {
         const mouthScale = mouthHappy ? 1.35 : mouthBored ? 0.72 : mouthSurprised ? 1.5 : 1;

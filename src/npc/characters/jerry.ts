@@ -68,15 +68,15 @@ function createJerryFace(head: THREE.Group, snout: THREE.Object3D): FaceRig {
   head.add(nose);
 
   const mouthMaterial = new THREE.MeshStandardMaterial({ color: 0x2a1810, roughness: 0.9, metalness: 0 });
+  // Water reflection of the old frown arc: corners dip in local Y, center lifts — reads as smile on camera.
   const smile = new THREE.QuadraticBezierCurve3(
-    new THREE.Vector3(-0.11, 0.02, 0),
-    new THREE.Vector3(0, -0.085, 0.02),
-    new THREE.Vector3(0.11, 0.02, 0)
+    new THREE.Vector3(-0.11, 0.055, 0),
+    new THREE.Vector3(0, -0.02, 0.02),
+    new THREE.Vector3(0.11, 0.055, 0)
   );
   const mouth = new THREE.Mesh(new THREE.TubeGeometry(smile, 16, 0.013, 6, false), mouthMaterial);
   mouth.position.set(0, -0.085, 0.46);
   mouth.rotation.set(0, 0.08, 0);
-  mouth.scale.y = -1;
   mouth.renderOrder = 2;
   head.add(mouth);
 
